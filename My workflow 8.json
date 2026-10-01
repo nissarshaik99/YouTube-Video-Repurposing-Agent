@@ -1,0 +1,288 @@
+{
+  "name": "My workflow 8",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "28f6e808-d900-40d0-a6fb-7beab866c32e",
+              "name": "youtube_url",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1040,
+        -224
+      ],
+      "id": "6850ede7-2a6d-4abf-9311-b62d7b348031",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.youtube-transcript.io/api/transcripts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic 6abb628b0efcab67a7ee369d"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "video_id",
+              "value": "={{ ($json.youtube_url.match(/(?:v=|youtu\\.be\\/|shorts\\/)([A-Za-z0-9_-]{11})/) || [])[1] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ids\": [\n    \"{{ ($json.youtube_url.match(/[A-Za-z0-9_-]{11}/) || [])[0] }}\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -848,
+        -224
+      ],
+      "id": "8cf5fcc3-5d05-489e-9954-3e6dcff83949",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text.slice(0, 4000) }}",
+        "options": {
+          "systemMessage": "=You are a helpful assistant. Reply briefly.\nYou are a professional YouTube Video Repurposing Agent.\n\nCreate concise social-media content from the YouTube transcript.\n\nReturn exactly:\nVIDEO SUMMARY:\n[3-5 sentences]\n\nKEY POINTS:\n[5 bullet points]\n\nSHORT / REEL IDEAS:\n[3 ideas, each with Hook and Script]\n\nINSTAGRAM / LINKEDIN CAPTION:\n[caption]\n\nX / TWITTER POST:\n[post]\n\nHASHTAGS:\n[hashtags]\n\nYOUTUBE TITLE SUGGESTIONS:\n[5 titles]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -656,
+        -224
+      ],
+      "id": "39b17d6a-0dc8-4d0f-83a1-813accf8e909",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "maxTokensToSample": 8000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -48
+      ],
+      "id": "d550c2e9-aa63-4e01-aea4-7c7dc94db964",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "TzpTHJQk8VZWoih7",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1yjDOLjtoqarpY7r3CfFRBXA3Ua_RQ88e",
+        "title": "=YouTube Repurposed Content - {{ $now.toFormat('yyyy-MM-dd HH-mm') }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -224
+      ],
+      "id": "3ddd7461-ba79-4d2f-a57b-89cb88c78a77",
+      "name": "Create a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "nS0rhaCDvQJBJuAA",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('AI Agent').item.json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -224
+      ],
+      "id": "4f5912fa-1dcf-4b11-a62d-9fed29f8d063",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "nS0rhaCDvQJBJuAA",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8747857147",
+        "text": "=🎬 YouTube Repurposing Complete!\n\n{{ $('AI Agent').item.json.output }}\n\n📄 Google Docs:\nhttps://docs.google.com/document/d/{{ $('Create a document').item.json.id }}/edit",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        96,
+        -224
+      ],
+      "id": "91e2f39c-27ba-47f8-8839-f61fe7c9100e",
+      "name": "Send a text message",
+      "webhookId": "f997e58e-78f6-4c8f-936a-0b9900f28339",
+      "credentials": {
+        "telegramApi": {
+          "id": "VlvnWAIwHuUs0P6O",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -1264,
+        -224
+      ],
+      "id": "1881aa40-d0ef-4f2e-a478-4d7e4c73480b",
+      "name": "Telegram Trigger",
+      "webhookId": "0b60e5a6-e90c-4f30-9223-7ead491f1d00",
+      "credentials": {
+        "telegramApi": {
+          "id": "VlvnWAIwHuUs0P6O",
+          "name": "Unnamed credential"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9761abb6-ceb3-4dc1-9877-2f9cf7f0e470",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "35fa8f6fa75fc9360c5dbc6841a37d16a424f008bc74fda89f65ad3210dea6a5"
+  },
+  "nodeGroups": [],
+  "id": "UCtdqDQ37IVaYQo5",
+  "tags": []
+}
